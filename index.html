@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Cup 2026 — Match Betting</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap');
+
+  :root {
+    --pitch:   #0A2A1A;
+    --deep:    #061810;
+    --panel:   #0F3323;
+    --gold:    #F5C518;
+    --gold2:   #D4A800;
+    --red:     #C0392B;
+    --green:   #27AE60;
+    --white:   #F0F4F0;
+    --muted:   #6B9980;
+    --border:  #1C4A30;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--deep);
+    color: var(--white);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--pitch);
+    border-bottom: 3px solid var(--gold);
+    padding: 20px 24px 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(245,197,24,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-eyebrow {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 6px;
+  }
+  header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(28px, 6vw, 52px);
+    font-weight: 900; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--white); line-height: 1;
+  }
+  header h1 span { color: var(--gold); }
+  .header-sub {
+    font-size: 13px; color: var(--muted); margin-top: 8px; letter-spacing: 1px;
+  }
+  .trophy { font-size: 32px; margin-bottom: 8px; }
+
+  /* ── Admin Toggle ── */
+  .admin-bar {
+    background: var(--deep); border-bottom: 1px solid var(--border);
+    padding: 8px 24px; display: flex; justify-content: flex-end; gap: 12px; align-items: center;
+  }
+  .admin-bar span { font-size: 12px; color: var(--muted); }
+  .btn-sm {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; padding: 6px 14px;
+    border-radius: 4px; border: 1px solid var(--border); cursor: pointer;
+    background: var(--panel); color: var(--muted); transition: all .2s;
+  }
+  .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-sm.active { background: var(--gold); color: var(--deep); border-color: var(--gold); }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; border-bottom: 1px solid var(--border);
+    padding: 0 24px; background: var(--pitch);
+  }
+  .tab-btn {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; padding: 14px 20px;
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    border-bottom: 3px solid transparent; margin-bottom: -1px; transition: all .2s;
+  }
+  .tab-btn:hover { color: var(--white); }
+  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── Layout ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ── Section headings ── */
+  .section-head {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 11px;
+    letter-spacing: 4px; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-head::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── Match Card ── */
+  .match-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 16px; overflow: hidden;
+    transition: border-color .2s;
+  }
+  .match-card:hover { border-color: #2a6644; }
+
+  .match-header {
+    padding: 10px 16px; background: rgba(0,0,0,.25);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase;
+  }
+  .match-group { font-weight: 600; color: var(--gold); font-size: 11px; }
+  .match-status { display: flex; align-items: center; gap: 6px; }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--muted);
+  }
+  .status-dot.open { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .status-dot.closed { background: var(--red); }
+  .status-dot.settled { background: var(--gold); }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: .4; }
+  }
+
+  .match-body {
+    padding: 16px;
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center;
+  }
+
+  .team { text-align: center; }
+  .team-flag { font-size: 36px; display: block; margin-bottom: 6px; line-height: 1; }
+  .team-name {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--white);
+  }
+  .team-pool {
+    font-size: 12px; color: var(--muted); margin-top: 4px;
+  }
+  .team-pool strong { color: var(--gold); }
+
+  .vs-block { text-align: center; }
+  .vs-text {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 22px;
+    font-weight: 900; color: var(--border); letter-spacing: 2px;
+  }
+  .match-date { font-size: 11px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+  .match-venue { font-size: 10px; color: #4a7a5a; margin-top: 2px; }
+
+  /* ── Bet Input Area ── */
+  .bet-area {
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .bet-option {
+    background: rgba(0,0,0,.3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px; transition: all .2s; cursor: pointer;
+  }
+  .bet-option:hover { border-color: var(--gold2); }
+  .bet-option.selected-a { border-color: #3498DB; background: rgba(52,152,219,.1); }
+  .bet-option.selected-b { border-color: #E67E22; background: rgba(230,126,34,.1); }
+
+  .bet-label {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px;
+    font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .bet-label.team-a-color { color: #5DADE2; }
+  .bet-label.team-b-color { color: #E59866; }
+
+  .bet-row { display: flex; gap: 8px; align-items: center; }
+  .bet-input {
+    flex: 1; background: var(--deep); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--white); font-family: 'Barlow', sans-serif;
+    font-size: 15px; font-weight: 600; padding: 8px 10px; outline: none;
+    transition: border-color .2s;
+  }
+  .bet-input:focus { border-color: var(--gold); }
+  .bet-input::placeholder { color: #3a6a4a; }
+
+  .btn-bet {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; padding: 8px 14px;
+    border-radius: 4px; border: none; cursor: pointer;
+    background: var(--gold); color: var(--deep); transition: all .2s; white-space: nowrap;
+  }
+  .btn-bet:hover { background: #FFD700; transform: translateY(-1px); }
+  .btn-bet:active { transform: translateY(0); }
+  .btn-bet:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+
+  .payout-preview {
+    font-size: 11px; color: var(--muted); margin-top: 6px; min-height: 16px;
+  }
+  .payout-preview strong { color: var(--green); }
+
+  /* ── Admin: Settle Match ── */
+  .settle-area {
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    display: none; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .settle-area.visible { display: flex; }
+  .settle-label { font-size: 12px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-right: 4px; }
+  .btn-settle-a {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; padding: 6px 14px; border-radius: 4px; border: 1px solid #3498DB;
+    background: rgba(52,152,219,.15); color: #5DADE2; cursor: pointer; transition: all .2s;
+  }
+  .btn-settle-a:hover { background: rgba(52,152,219,.3); }
+  .btn-settle-b {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; padding: 6px 14px; border-radius: 4px; border: 1px solid #E67E22;
+    background: rgba(230,126,34,.15); color: #E59866; cursor: pointer; transition: all .2s;
+  }
+  .btn-settle-b:hover { background: rgba(230,126,34,.3); }
+  .btn-settle-draw {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; padding: 6px 14px; border-radius: 4px; border: 1px solid var(--border);
+    background: rgba(255,255,255,.05); color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .btn-settle-draw:hover { border-color: var(--muted); color: var(--white); }
+
+  .settled-banner {
+    padding: 10px 16px; border-top: 1px solid var(--border);
+    display: none; align-items: center; gap: 10px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .settled-banner.visible { display: flex; }
+  .settled-banner .winner-tag { color: var(--gold); font-size: 18px; }
+  .settled-banner .result-text { color: var(--muted); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+  /* ── Ledger / My Bets tab ── */
+  .ledger-empty {
+    text-align: center; padding: 60px 20px; color: var(--muted);
+  }
+  .ledger-empty .big-icon { font-size: 48px; margin-bottom: 12px; opacity: .4; }
+  .ledger-empty p { font-size: 14px; }
+
+  .bet-ledger-item {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 12px; padding: 14px 16px;
+    display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start;
+  }
+  .bet-ledger-item.won { border-left: 3px solid var(--green); }
+  .bet-ledger-item.lost { border-left: 3px solid var(--red); }
+  .bet-ledger-item.pending { border-left: 3px solid var(--gold); }
+  .bet-ledger-item.draw { border-left: 3px solid var(--muted); }
+
+  .ledger-match { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .ledger-pick {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .ledger-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .ledger-status {
+    text-align: right;
+  }
+  .status-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 12px;
+    font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .badge-pending { background: rgba(245,197,24,.15); color: var(--gold); }
+  .badge-won { background: rgba(39,174,96,.2); color: #2ECC71; }
+  .badge-lost { background: rgba(192,57,43,.2); color: #E74C3C; }
+  .badge-draw { background: rgba(107,153,128,.15); color: var(--muted); }
+  .ledger-payout { font-size: 14px; font-weight: 600; margin-top: 6px; }
+  .payout-won { color: var(--green); }
+  .payout-lost { color: var(--red); }
+  .payout-refund { color: var(--muted); }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-box {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; text-align: center;
+  }
+  .stat-num {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 28px;
+    font-weight: 900; color: var(--gold); line-height: 1;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── House Panel ── */
+  .house-panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px; margin-bottom: 24px;
+  }
+  .house-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .house-row:last-child { border-bottom: none; }
+  .house-row .label { color: var(--muted); }
+  .house-row .val { font-weight: 600; }
+  .house-row .val.gold { color: var(--gold); }
+  .house-row .val.green { color: var(--green); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--panel); border: 1px solid var(--gold);
+    border-radius: 8px; padding: 14px 24px; font-size: 14px; font-weight: 500;
+    color: var(--white); z-index: 999; transition: transform .3s ease, opacity .3s;
+    opacity: 0; pointer-events: none; white-space: nowrap; text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast .toast-icon { margin-right: 8px; }
+
+  /* ── Lights animation on bet ── */
+  @keyframes flash {
+    0%,100% { opacity: 1; } 50% { opacity: .3; }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 520px) {
+    .stats-bar { grid-template-columns: repeat(2,1fr); }
+    .match-body { grid-template-columns: 1fr auto 1fr; gap: 6px; }
+    .team-flag { font-size: 28px; }
+    .team-name { font-size: 14px; }
+    .bet-area { grid-template-columns: 1fr; }
+    .tabs { padding: 0 8px; }
+    .tab-btn { padding: 12px 12px; font-size: 13px; }
+  }
+
+  .payout-info-box {
+    background: rgba(245,197,24,.07); border: 1px solid rgba(245,197,24,.2);
+    border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;
+    color: var(--muted); line-height: 1.6;
+  }
+  .payout-info-box strong { color: var(--gold); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="trophy">🏆</div>
+  <div class="header-eyebrow">Official Betting Pool</div>
+  <h1>FIFA World Cup <span>2026</span></h1>
+  <div class="header-sub">USA · Canada · Mexico &nbsp;·&nbsp; June – July 2026</div>
+</header>
+
+<!-- Admin Toggle -->
+<div class="admin-bar">
+  <span>Mode:</span>
+  <button class="btn-sm" id="btnUser" onclick="setMode('user')">👤 Bettor</button>
+  <button class="btn-sm active" id="btnAdmin" onclick="setMode('admin')">🔑 Admin</button>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('matches')">⚽ Matches</button>
+  <button class="tab-btn" onclick="switchTab('mybets')">🎟️ My Bets</button>
+  <button class="tab-btn" onclick="switchTab('house')">🏦 House Summary</button>
+</div>
+
+<!-- ══════════════════ MATCHES TAB ══════════════════ -->
+<div id="tab-matches" class="tab-content active">
+<div class="container">
+
+  <div class="payout-info-box">
+    <strong>How payouts work:</strong> All bets on each side form a pool. If your team wins, you get your stake back plus a proportional share of the losing side's pool — minus a <strong>10% house cut</strong>. Draws refund everyone. The house keeps all losing bets minus winner payouts.
+  </div>
+
+  <div class="section-head">Group Stage Matches</div>
+  <div id="matchList"></div>
+
+</div>
+</div>
+
+<!-- ══════════════════ MY BETS TAB ══════════════════ -->
+<div id="tab-mybets" class="tab-content">
+<div class="container">
+
+  <div class="stats-bar" id="betStats">
+    <div class="stat-box"><div class="stat-num" id="statTotal">$0</div><div class="stat-label">Total Wagered</div></div>
+    <div class="stat-box"><div class="stat-num" id="statWon">$0</div><div class="stat-label">Total Won</div></div>
+    <div class="stat-box"><div class="stat-num" id="statPending">0</div><div class="stat-label">Pending Bets</div></div>
+    <div class="stat-box"><div class="stat-num" id="statNet" style="color:#fff">$0</div><div class="stat-label">Net P&L</div></div>
+  </div>
+
+  <div class="section-head">Bet History</div>
+  <div id="betLedger"></div>
+
+</div>
+</div>
+
+<!-- ══════════════════ HOUSE SUMMARY TAB ══════════════════ -->
+<div id="tab-house" class="tab-content">
+<div class="container">
+
+  <div class="section-head">House Revenue</div>
+  <div class="house-panel" id="housePanel"></div>
+
+  <div class="section-head" style="margin-top:24px">All Bets Placed</div>
+  <div id="allBetsTable"></div>
+
+</div>
+</div>
+
+<!-- Toast -->
+<div id="toast"><span class="toast-icon">✅</span><span id="toastMsg">Bet placed!</span></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════════════════════════════
+var HOUSE_CUT = 0.10; // 10%
+
+var MATCHES = [
+  { id:'m1',  group:'Group A', date:'Jun 11', venue:'SoFi Stadium, LA',   teamA:'🇺🇸', nameA:'USA',     teamB:'🇧🇴', nameB:'Bolivia',   status:'open',   winner:null },
+  { id:'m2',  group:'Group B', date:'Jun 12', venue:'MetLife Stadium, NJ', teamA:'🇧🇷', nameA:'Brazil',  teamB:'🇦🇿', nameB:'Azerbaijan',status:'open',   winner:null },
+  { id:'m3',  group:'Group C', date:'Jun 12', venue:'AT&T Stadium, TX',    teamA:'🇦🇷', nameA:'Argentina',teamB:'🇰🇿', nameB:'Kazakhstan',status:'open',   winner:null },
+  { id:'m4',  group:'Group D', date:'Jun 13', venue:'Rose Bowl, LA',       teamA:'🇫🇷', nameA:'France',  teamB:'🇵🇱', nameB:'Poland',    status:'open',   winner:null },
+  { id:'m5',  group:'Group E', date:'Jun 14', venue:'Levi Stadium, SF',  teamA:'🇩🇪', nameA:'Germany', teamB:'🇸🇨', nameB:'Seychelles', status:'open',  winner:null },
+  { id:'m6',  group:'Group F', date:'Jun 15', venue:'Estadio Azteca, MX',  teamA:'🇲🇽', nameA:'Mexico',  teamB:'🇰🇷', nameB:'South Korea',status:'open',  winner:null },
+  { id:'m7',  group:'Group G', date:'Jun 16', venue:'BC Place, Vancouver', teamA:'🇵🇹', nameA:'Portugal',teamB:'🇨🇮', nameB:'Ivory Coast',status:'open',  winner:null },
+  { id:'m8',  group:'Group H', date:'Jun 17', venue:'BMO Field, Toronto',  teamA:'🏴', nameA:'England', teamB:'🇳🇬', nameB:'Nigeria',   status:'open',   winner:null },
+  { id:'m9',  group:'Group A', date:'Jun 18', venue:'Estadio Monumental', teamA:'🇨🇦', nameA:'Canada',  teamB:'🇲🇦', nameB:'Morocco',   status:'open',   winner:null },
+  { id:'m10', group:'Group B', date:'Jun 19', venue:'Allegiant Stadium, LV',teamA:'🇪🇸', nameA:'Spain',   teamB:'🇯🇵', nameB:'Japan',     status:'open',   winner:null },
+];
+
+// pools[matchId] = { A: number, B: number }
+var pools = {};
+// bets = [ { matchId, bettor, team:'A'|'B', amount, status:'pending'|'won'|'lost'|'draw', payout } ]
+var bets = [];
+
+var isAdmin = true;
+var currentBettor = 'Player1';
+
+MATCHES.forEach(function(m) { pools[m.id] = { A:0, B:0 }; });
+
+// ════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ════════════════════════════════════════════════════════════════
+function fmt(n) { return '$' + parseFloat(n).toFixed(2); }
+
+function calcPayout(matchId, team, stake) {
+  var p = pools[matchId];
+  var mySide   = team === 'A' ? (p.A + stake) : (p.B + stake);
+  var theirSide= team === 'A' ? p.B : p.A;
+  if (theirSide === 0) return stake; // no one on other side yet
+  var prize = theirSide * (1 - HOUSE_CUT);
+  var share  = (stake / mySide) * prize;
+  return stake + share;
+}
+
+function getMatch(id) {
+  for (var i=0; i<MATCHES.length; i++) { if (MATCHES[i].id===id) return MATCHES[i]; }
+}
+
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  var icon = isError ? '❌' : '✅';
+  document.getElementById('toastMsg').textContent = msg;
+  t.querySelector('.toast-icon').textContent = icon + ' ';
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MODE
+// ════════════════════════════════════════════════════════════════
+function setMode(mode) {
+  isAdmin = (mode === 'admin');
+  document.getElementById('btnAdmin').className = 'btn-sm' + (isAdmin ? ' active' : '');
+  document.getElementById('btnUser').className  = 'btn-sm' + (!isAdmin ? ' active' : '');
+  renderMatches();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  var tabs = ['matches','mybets','house'];
+  tabs.forEach(function(t) {
+    document.getElementById('tab-'+t).className = 'tab-content' + (t===tab ? ' active' : '');
+  });
+  document.querySelectorAll('.tab-btn').forEach(function(btn, i) {
+    btn.className = 'tab-btn' + (tabs[i]===tab ? ' active' : '');
+  });
+  if (tab==='mybets') renderLedger();
+  if (tab==='house')  renderHouse();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  RENDER MATCHES
+// ════════════════════════════════════════════════════════════════
+function renderMatches() {
+  var html = '';
+  MATCHES.forEach(function(m) {
+    var p = pools[m.id];
+    var dotClass = m.status==='open' ? 'open' : (m.status==='settled' ? 'settled' : 'closed');
+    var statusLabel = m.status==='open' ? 'Open' : (m.status==='settled' ? 'Settled' : 'Closed');
+
+    var betAreaHtml = '';
+    if (m.status === 'open') {
+      betAreaHtml = '<div class="bet-area">' +
+        teamBetBlock(m, 'A') +
+        teamBetBlock(m, 'B') +
+      '</div>';
+    } else if (m.status === 'settled') {
+      var winnerName = m.winner === 'A' ? m.nameA : (m.winner === 'B' ? m.nameB : 'Draw');
+      var winnerFlag = m.winner === 'A' ? m.teamA : (m.winner === 'B' ? m.teamB : '🤝');
+      betAreaHtml = '<div class="settled-banner visible">' +
+        '<span style="font-size:22px">' + winnerFlag + '</span>' +
+        '<span class="winner-tag">' + winnerName.toUpperCase() + ' WON</span>' +
+        '<span class="result-text">— Match settled. Payouts distributed.</span>' +
+      '</div>';
+    }
+
+    var settleHtml = '';
+    if (isAdmin && m.status === 'open') {
+      settleHtml = '<div class="settle-area visible">' +
+        '<span class="settle-label">Settle:</span>' +
+        '<button class="btn-settle-a" onclick="settleMatch(\'' + m.id + '\',\'A\')">🏅 ' + m.nameA + ' Won</button>' +
+        '<button class="btn-settle-b" onclick="settleMatch(\'' + m.id + '\',\'B\')">🏅 ' + m.nameB + ' Won</button>' +
+        '<button class="btn-settle-draw" onclick="settleMatch(\'' + m.id + '\',\'draw\')">🤝 Draw / Refund</button>' +
+      '</div>';
+    }
+
+    html += '<div class="match-card" id="card-' + m.id + '">' +
+      '<div class="match-header">' +
+        '<span class="match-group">' + m.group + '</span>' +
+        '<span class="match-status"><span class="status-dot ' + dotClass + '"></span>' + statusLabel + '</span>' +
+      '</div>' +
+      '<div class="match-body">' +
+        '<div class="team">' +
+          '<span class="team-flag">' + m.teamA + '</span>' +
+          '<div class="team-name">' + m.nameA + '</div>' +
+          '<div class="team-pool">Pool: <strong>' + fmt(p.A) + '</strong></div>' +
+        '</div>' +
+        '<div class="vs-block">' +
+          '<div class="vs-text">VS</div>' +
+          '<div class="match-date">' + m.date + '</div>' +
+          '<div class="match-venue">' + m.venue + '</div>' +
+        '</div>' +
+        '<div class="team">' +
+          '<span class="team-flag">' + m.teamB + '</span>' +
+          '<div class="team-name">' + m.nameB + '</div>' +
+          '<div class="team-pool">Pool: <strong>' + fmt(p.B) + '</strong></div>' +
+        '</div>' +
+      '</div>' +
+      betAreaHtml +
+      settleHtml +
+    '</div>';
+  });
+  document.getElementById('matchList').innerHTML = html;
+}
+
+function teamBetBlock(m, side) {
+  var name  = side==='A' ? m.nameA : m.nameB;
+  var color = side==='A' ? 'team-a-color' : 'team-b-color';
+  var selClass = '';
+  var inputId  = 'bet-input-' + m.id + '-' + side;
+  var previewId= 'preview-' + m.id + '-' + side;
+  return '<div class="bet-option" id="opt-' + m.id + '-' + side + '">' +
+    '<div class="bet-label ' + color + '">Bet on ' + name + '</div>' +
+    '<div class="bet-row">' +
+      '<input class="bet-input" type="number" id="' + inputId + '" min="1" step="1" placeholder="$ amount" oninput="previewPayout(\'' + m.id + '\',\'' + side + '\')">' +
+      '<button class="btn-bet" onclick="placeBet(\'' + m.id + '\',\'' + side + '\')">Bet</button>' +
+    '</div>' +
+    '<div class="payout-preview" id="' + previewId + '">Enter amount to see estimated payout</div>' +
+  '</div>';
+}
+
+function previewPayout(matchId, side) {
+  var inputId   = 'bet-input-' + matchId + '-' + side;
+  var previewId = 'preview-' + matchId + '-' + side;
+  var val = parseFloat(document.getElementById(inputId).value);
+  var el  = document.getElementById(previewId);
+  if (!val || val <= 0) { el.innerHTML = 'Enter amount to see estimated payout'; return; }
+  var est = calcPayout(matchId, side, val);
+  el.innerHTML = 'Est. payout: <strong>' + fmt(est) + '</strong> (incl. stake)';
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PLACE BET
+// ════════════════════════════════════════════════════════════════
+function placeBet(matchId, side) {
+  var m = getMatch(matchId);
+  if (m.status !== 'open') { showToast('Betting is closed for this match.', true); return; }
+
+  var inputId = 'bet-input-' + matchId + '-' + side;
+  var val = parseFloat(document.getElementById(inputId).value);
+  if (!val || val < 1) { showToast('Please enter a valid bet amount ($1 min).', true); return; }
+
+  // Add to pool
+  pools[matchId][side] += val;
+
+  // Record bet
+  bets.push({ matchId: matchId, bettor: currentBettor, team: side, amount: val, status:'pending', payout:0 });
+
+  // Clear input
+  document.getElementById(inputId).value = '';
+  document.getElementById('preview-' + matchId + '-' + side).innerHTML = 'Enter amount to see estimated payout';
+
+  var teamName = side==='A' ? m.nameA : m.nameB;
+  showToast(fmt(val) + ' placed on ' + teamName + '!');
+  renderMatches();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SETTLE MATCH
+// ════════════════════════════════════════════════════════════════
+function settleMatch(matchId, winner) {
+  var m = getMatch(matchId);
+  if (m.status !== 'open') { showToast('Already settled.', true); return; }
+
+  var p = pools[matchId];
+  m.winner = winner;
+  m.status = 'settled';
+
+  var winnerName = winner==='A' ? m.nameA : (winner==='B' ? m.nameB : 'Draw');
+
+  // Calculate payouts for each relevant bet
+  var winSide   = winner; // 'A', 'B', or 'draw'
+  var loseSide  = winner==='A' ? 'B' : (winner==='B' ? 'A' : null);
+
+  // Total winner pool & loser pool
+  var winPool  = winner !== 'draw' ? p[winner]  : 0;
+  var losePool = winner !== 'draw' ? p[loseSide]: 0;
+  var prizePool = losePool * (1 - HOUSE_CUT); // what winners share
+
+  bets.forEach(function(b) {
+    if (b.matchId !== matchId) return;
+    if (b.status !== 'pending') return;
+
+    if (winner === 'draw') {
+      b.status = 'draw';
+      b.payout = b.amount; // full refund
+    } else if (b.team === winner) {
+      // Share of prize pool proportional to stake
+      var share = winPool > 0 ? (b.amount / winPool) * prizePool : 0;
+      b.payout = b.amount + share;
+      b.status = 'won';
+    } else {
+      b.payout = 0;
+      b.status = 'lost';
+    }
+  });
+
+  showToast(winnerName + ' — match settled!');
+  renderMatches();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MY BETS / LEDGER
+// ════════════════════════════════════════════════════════════════
+function renderLedger() {
+  var myBets = bets.filter(function(b){ return b.bettor === currentBettor; });
+
+  // Stats
+  var totalWagered = 0, totalWon = 0, pendingCount = 0;
+  myBets.forEach(function(b) {
+    totalWagered += b.amount;
+    if (b.status==='won') totalWon += b.payout;
+    if (b.status==='pending') pendingCount++;
+  });
+  var net = totalWon - totalWagered;
+  document.getElementById('statTotal').textContent   = fmt(totalWagered);
+  document.getElementById('statWon').textContent     = fmt(totalWon);
+  document.getElementById('statPending').textContent = pendingCount;
+  var netEl = document.getElementById('statNet');
+  netEl.textContent = (net >= 0 ? '+' : '') + fmt(net);
+  netEl.style.color = net >= 0 ? '#27AE60' : '#E74C3C';
+
+  if (myBets.length === 0) {
+    document.getElementById('betLedger').innerHTML =
+      '<div class="ledger-empty"><div class="big-icon">🎟️</div><p>No bets placed yet. Head to the Matches tab to get started!</p></div>';
+    return;
+  }
+
+  var html = '';
+  myBets.slice().reverse().forEach(function(b) {
+    var m = getMatch(b.matchId);
+    var teamName = b.team==='A' ? m.nameA : m.nameB;
+    var teamFlag = b.team==='A' ? m.teamA : m.teamB;
+    var oppName  = b.team==='A' ? m.nameB : m.nameA;
+
+    var badgeClass = 'badge-' + b.status;
+    var badgeText  = b.status.toUpperCase();
+    var payoutHtml = '';
+    if (b.status==='won')     payoutHtml = '<div class="ledger-payout payout-won">+' + fmt(b.payout - b.amount) + ' profit &rarr; ' + fmt(b.payout) + ' total</div>';
+    if (b.status==='lost')    payoutHtml = '<div class="ledger-payout payout-lost">Lost ' + fmt(b.amount) + '</div>';
+    if (b.status==='draw')    payoutHtml = '<div class="ledger-payout payout-refund">Refunded ' + fmt(b.amount) + '</div>';
+    if (b.status==='pending') payoutHtml = '<div class="ledger-payout" style="color:var(--muted)">Awaiting result…</div>';
+
+    html += '<div class="bet-ledger-item ' + b.status + '">' +
+      '<div>' +
+        '<div class="ledger-match">' + m.group + ' &middot; ' + m.date + ' &middot; vs ' + oppName + '</div>' +
+        '<div class="ledger-pick">' + teamFlag + ' ' + teamName + '</div>' +
+        '<div class="ledger-detail">Staked: ' + fmt(b.amount) + '</div>' +
+        payoutHtml +
+      '</div>' +
+      '<div class="ledger-status"><span class="status-badge ' + badgeClass + '">' + badgeText + '</span></div>' +
+    '</div>';
+  });
+  document.getElementById('betLedger').innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  HOUSE SUMMARY
+// ════════════════════════════════════════════════════════════════
+function renderHouse() {
+  var totalIn = 0, totalOut = 0, totalRefunds = 0;
+  bets.forEach(function(b) {
+    totalIn += b.amount;
+    if (b.status==='won')  totalOut     += b.payout;
+    if (b.status==='draw') totalRefunds += b.amount;
+  });
+  var houseKeep = totalIn - totalOut - totalRefunds;
+
+  var p = document.getElementById('housePanel');
+  p.innerHTML =
+    row('Total Bets Received', fmt(totalIn), '') +
+    row('Total Paid to Winners', fmt(totalOut), '') +
+    row('Total Refunded (Draws)', fmt(totalRefunds), '') +
+    row('House Take (10% vig on settled)', fmt(Math.max(0, houseKeep)), 'gold') +
+    row('Pending (unsettled bets)', fmt(pendingTotal()), '');
+
+  // All bets table
+  if (bets.length === 0) {
+    document.getElementById('allBetsTable').innerHTML =
+      '<div class="ledger-empty"><div class="big-icon">📊</div><p>No bets yet.</p></div>';
+    return;
+  }
+  var html = '';
+  bets.forEach(function(b, i) {
+    var m = getMatch(b.matchId);
+    var teamName = b.team==='A' ? m.nameA : m.nameB;
+    var payoutText = b.status==='won' ? fmt(b.payout) : (b.status==='lost' ? '—' : (b.status==='draw' ? 'Refund' : 'Pending'));
+    html += '<div class="bet-ledger-item ' + b.status + '">' +
+      '<div>' +
+        '<div class="ledger-match">' + m.nameA + ' vs ' + m.nameB + ' · ' + m.date + '</div>' +
+        '<div class="ledger-pick">' + b.bettor + ' → ' + teamName + '</div>' +
+        '<div class="ledger-detail">Staked ' + fmt(b.amount) + '</div>' +
+      '</div>' +
+      '<div class="ledger-status"><span class="status-badge badge-' + b.status + '">' + b.status.toUpperCase() + '</span>' +
+      '<div class="ledger-payout ' + (b.status==='won' ? 'payout-won' : '') + '">' + payoutText + '</div></div>' +
+    '</div>';
+  });
+  document.getElementById('allBetsTable').innerHTML = html;
+}
+
+function pendingTotal() {
+  var t = 0;
+  bets.forEach(function(b){ if (b.status==='pending') t += b.amount; });
+  return t;
+}
+
+function row(label, val, cls) {
+  return '<div class="house-row"><span class="label">' + label + '</span><span class="val ' + cls + '">' + val + '</span></div>';
+}
+
+// ════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════
+renderMatches();
+</script>
+</body>
+</html>
