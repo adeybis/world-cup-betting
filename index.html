@@ -194,6 +194,9 @@
   .btn-bet:active { transform: translateY(0); }
   .btn-bet:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
 
+  .name-input {
+    width: 100%; margin-bottom: 8px; font-size: 14px !important;
+  }
   .payout-preview {
     font-size: 11px; color: var(--muted); margin-top: 6px; min-height: 16px;
   }
@@ -404,6 +407,9 @@
   <div class="section-head">House Revenue</div>
   <div class="house-panel" id="housePanel"></div>
 
+  <div class="section-head" style="margin-top:24px">💰 Payout List — Who To Pay</div>
+  <div id="payoutList"></div>
+
   <div class="section-head" style="margin-top:24px">All Bets Placed</div>
   <div id="allBetsTable"></div>
 
@@ -412,6 +418,34 @@
 
 <!-- Toast -->
 <div id="toast"><span class="toast-icon">✅</span><span id="toastMsg">Bet placed!</span></div>
+
+
+<!-- Admin Edit Modal -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#0F3323;border:1px solid #F5C518;border-radius:12px;padding:24px;width:90%;max-width:380px;">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#F5C518;margin-bottom:4px;">Edit Bet</div>
+    <div id="editMatchLabel" style="font-size:12px;color:#6B9980;margin-bottom:18px;"></div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:#6B9980;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Bettor Name</div>
+      <input id="editName" type="text" class="bet-input" style="width:100%" placeholder="Name">
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:#6B9980;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Amount ($)</div>
+      <input id="editAmount" type="number" class="bet-input" style="width:100%" min="1" placeholder="Amount">
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;color:#6B9980;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Team</div>
+      <select id="editTeam" class="bet-input" style="width:100%;background:#061810;cursor:pointer;">
+        <option value="A" id="editOptA"></option>
+        <option value="B" id="editOptB"></option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="saveEditBet()" style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:10px;border-radius:6px;border:none;background:#F5C518;color:#061810;cursor:pointer;">Save Changes</button>
+      <button onclick="closeModal()" style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:10px;border-radius:6px;border:1px solid #1C4A30;background:none;color:#6B9980;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ════════════════════════════════════════════════════════════════
@@ -563,11 +597,12 @@ function renderMatches() {
 function teamBetBlock(m, side) {
   var name  = side==='A' ? m.nameA : m.nameB;
   var color = side==='A' ? 'team-a-color' : 'team-b-color';
-  var selClass = '';
   var inputId  = 'bet-input-' + m.id + '-' + side;
+  var nameId   = 'bet-name-' + m.id + '-' + side;
   var previewId= 'preview-' + m.id + '-' + side;
   return '<div class="bet-option" id="opt-' + m.id + '-' + side + '">' +
     '<div class="bet-label ' + color + '">Bet on ' + name + '</div>' +
+    '<input class="bet-input name-input" type="text" id="' + nameId + '" placeholder="Your name" autocomplete="off">' +
     '<div class="bet-row">' +
       '<input class="bet-input" type="number" id="' + inputId + '" min="1" step="1" placeholder="$ amount" oninput="previewPayout(\'' + m.id + '\',\'' + side + '\')">' +
       '<button class="btn-bet" onclick="placeBet(\'' + m.id + '\',\'' + side + '\')">Bet</button>' +
@@ -594,21 +629,26 @@ function placeBet(matchId, side) {
   if (m.status !== 'open') { showToast('Betting is closed for this match.', true); return; }
 
   var inputId = 'bet-input-' + matchId + '-' + side;
-  var val = parseFloat(document.getElementById(inputId).value);
+  var nameId  = 'bet-name-'  + matchId + '-' + side;
+  var val     = parseFloat(document.getElementById(inputId).value);
+  var bettor  = document.getElementById(nameId).value.trim();
+
+  if (!bettor) { showToast('Please enter your name before betting.', true); return; }
   if (!val || val < 1) { showToast('Please enter a valid bet amount ($1 min).', true); return; }
 
   // Add to pool
   pools[matchId][side] += val;
 
   // Record bet
-  bets.push({ matchId: matchId, bettor: currentBettor, team: side, amount: val, status:'pending', payout:0 });
+  bets.push({ matchId: matchId, bettor: bettor, team: side, amount: val, status:'pending', payout:0 });
 
-  // Clear input
+  // Clear inputs
   document.getElementById(inputId).value = '';
+  document.getElementById(nameId).value  = '';
   document.getElementById('preview-' + matchId + '-' + side).innerHTML = 'Enter amount to see estimated payout';
 
   var teamName = side==='A' ? m.nameA : m.nameB;
-  showToast(fmt(val) + ' placed on ' + teamName + '!');
+  showToast(bettor + ' placed ' + fmt(val) + ' on ' + teamName + '!');
   renderMatches();
 }
 
@@ -731,6 +771,57 @@ function renderHouse() {
     row('House Take (10% vig on settled)', fmt(Math.max(0, houseKeep)), 'gold') +
     row('Pending (unsettled bets)', fmt(pendingTotal()), '');
 
+  // ── Payout List ──
+  var winners = bets.filter(function(b){ return b.status === 'won' || b.status === 'draw'; });
+  var payoutEl = document.getElementById('payoutList');
+  if (winners.length === 0) {
+    payoutEl.innerHTML = '<div class="ledger-empty"><div class="big-icon">\u23f3</div><p>No settled winners yet. Settle a match to see who to pay.</p></div>';
+  } else {
+    var byPerson = {};
+    winners.forEach(function(b) {
+      var m = getMatch(b.matchId);
+      var key = b.bettor;
+      if (!byPerson[key]) byPerson[key] = { name: b.bettor, totalPayout: 0, totalStake: 0, wins: [] };
+      byPerson[key].totalPayout += b.payout;
+      byPerson[key].totalStake  += b.amount;
+      var teamName = b.team==='A' ? m.nameA : m.nameB;
+      var label = b.status==='draw' ? 'Draw refund (' + m.nameA + ' vs ' + m.nameB + ')' : teamName + ' won (' + m.nameA + ' vs ' + m.nameB + ')';
+      byPerson[key].wins.push({ label: label, stake: b.amount, payout: b.payout, status: b.status });
+    });
+
+    var ph = '<div style="margin-bottom:16px;padding:12px 16px;background:rgba(245,197,24,.07);border:1px solid rgba(245,197,24,.2);border-radius:8px;font-size:13px;color:#6B9980;">These are the amounts <strong style=\"color:#F5C518\">you owe</strong> to each winner. Hand them their full payout (stake + profit).</div>';
+
+    Object.keys(byPerson).forEach(function(key) {
+      var person = byPerson[key];
+      var profit = person.totalPayout - person.totalStake;
+      var detailRows = '';
+      person.wins.forEach(function(w) {
+        var prof = w.payout - w.stake;
+        detailRows += '<div style=\"display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1C4A30;font-size:12px;\">' +
+          '<span style=\"color:#6B9980;\">' + w.label + ' \u00b7 staked ' + fmt(w.stake) + '</span>' +
+          '<span style=\"color:' + (w.status==='draw' ? '#6B9980' : '#27AE60') + ';font-weight:600;\">' +
+            (w.status==='draw' ? 'Refund ' : '+' + fmt(prof) + ' \u2192 ') + fmt(w.payout) +
+          '</span>' +
+        '</div>';
+      });
+
+      ph += '<div style=\"background:#0F3323;border:1px solid #1C4A30;border-left:4px solid #F5C518;border-radius:8px;padding:16px;margin-bottom:12px;\">' +
+        '<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">' +
+          '<div>' +
+            '<div style=\"font-family:Barlow Condensed,sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase;\">' + person.name + '</div>' +
+            '<div style=\"font-size:12px;color:#6B9980;margin-top:2px;\">' + person.wins.length + ' winning bet' + (person.wins.length>1?'s':'') + '</div>' +
+          '</div>' +
+          '<div style=\"text-align:right;\">' +
+            '<div style=\"font-family:Barlow Condensed,sans-serif;font-size:28px;font-weight:900;color:#F5C518;line-height:1;\">' + fmt(person.totalPayout) + '</div>' +
+            '<div style=\"font-size:11px;color:#27AE60;margin-top:2px;\">+' + fmt(profit) + ' profit</div>' +
+          '</div>' +
+        '</div>' +
+        detailRows +
+      '</div>';
+    });
+    payoutEl.innerHTML = ph;
+  }
+
   // All bets table
   if (bets.length === 0) {
     document.getElementById('allBetsTable').innerHTML =
@@ -741,12 +832,21 @@ function renderHouse() {
   bets.forEach(function(b, i) {
     var m = getMatch(b.matchId);
     var teamName = b.team==='A' ? m.nameA : m.nameB;
+    var teamFlag = b.team==='A' ? m.teamA : m.teamB;
     var payoutText = b.status==='won' ? fmt(b.payout) : (b.status==='lost' ? '—' : (b.status==='draw' ? 'Refund' : 'Pending'));
+    var adminButtons = '';
+    if (isAdmin && b.status === 'pending') {
+      adminButtons = '<div style="display:flex;gap:6px;margin-top:8px;">' +
+        '<button onclick="openEditBet(' + i + ')" style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:4px;border:1px solid #F5C518;background:rgba(245,197,24,.1);color:#F5C518;cursor:pointer;">✏️ Edit</button>' +
+        '<button onclick="deleteBet(' + i + ')" style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:4px;border:1px solid #C0392B;background:rgba(192,57,43,.1);color:#E74C3C;cursor:pointer;">🗑️ Delete</button>' +
+      '</div>';
+    }
     html += '<div class="bet-ledger-item ' + b.status + '">' +
       '<div>' +
         '<div class="ledger-match">' + m.nameA + ' vs ' + m.nameB + ' · ' + m.date + '</div>' +
-        '<div class="ledger-pick">' + b.bettor + ' → ' + teamName + '</div>' +
+        '<div class="ledger-pick">' + teamFlag + ' ' + b.bettor + ' → ' + teamName + '</div>' +
         '<div class="ledger-detail">Staked ' + fmt(b.amount) + '</div>' +
+        adminButtons +
       '</div>' +
       '<div class="ledger-status"><span class="status-badge badge-' + b.status + '">' + b.status.toUpperCase() + '</span>' +
       '<div class="ledger-payout ' + (b.status==='won' ? 'payout-won' : '') + '">' + payoutText + '</div></div>' +
@@ -763,6 +863,66 @@ function pendingTotal() {
 
 function row(label, val, cls) {
   return '<div class="house-row"><span class="label">' + label + '</span><span class="val ' + cls + '">' + val + '</span></div>';
+}
+
+
+// ════════════════════════════════════════════════════════════════
+//  ADMIN EDIT / DELETE BETS
+// ════════════════════════════════════════════════════════════════
+var editingBetIndex = -1;
+
+function openEditBet(index) {
+  var b = bets[index];
+  var m = getMatch(b.matchId);
+  editingBetIndex = index;
+  document.getElementById('editMatchLabel').textContent = m.nameA + ' vs ' + m.nameB + ' · ' + m.date;
+  document.getElementById('editName').value   = b.bettor;
+  document.getElementById('editAmount').value = b.amount;
+  document.getElementById('editOptA').textContent = m.nameA;
+  document.getElementById('editOptB').textContent = m.nameB;
+  document.getElementById('editTeam').value   = b.team;
+  var modal = document.getElementById('editModal');
+  modal.style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('editModal').style.display = 'none';
+  editingBetIndex = -1;
+}
+
+function saveEditBet() {
+  if (editingBetIndex < 0) return;
+  var b       = bets[editingBetIndex];
+  var newName = document.getElementById('editName').value.trim();
+  var newAmt  = parseFloat(document.getElementById('editAmount').value);
+  var newTeam = document.getElementById('editTeam').value;
+
+  if (!newName) { showToast('Name cannot be empty.', true); return; }
+  if (!newAmt || newAmt < 1) { showToast('Amount must be at least $1.', true); return; }
+
+  // Adjust pool: remove old, add new
+  pools[b.matchId][b.team]    -= b.amount;
+  pools[b.matchId][newTeam]   += newAmt;
+
+  b.bettor = newName;
+  b.amount = newAmt;
+  b.team   = newTeam;
+
+  closeModal();
+  showToast('Bet updated successfully!');
+  renderMatches();
+  renderHouse();
+}
+
+function deleteBet(index) {
+  var b = bets[index];
+  if (!confirm('Delete bet by ' + b.bettor + ' for ' + fmt(b.amount) + '?')) return;
+  // Remove from pool
+  pools[b.matchId][b.team] -= b.amount;
+  bets.splice(index, 1);
+  showToast('Bet deleted.', false);
+  renderMatches();
+  renderHouse();
 }
 
 // ════════════════════════════════════════════════════════════════
